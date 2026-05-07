@@ -4,24 +4,6 @@ from typing import Tuple, Optional, Callable
 from layers import *
 
 
-def apply_rope(x: torch.Tensor, rope_cache: torch.Tensor) -> torch.Tensor:
-    x = x.transpose(1, 2)
-    xshaped = x.float().reshape(*x.shape[:-1], -1, 2)
-    rope_cache = rope_cache.view(-1, xshaped.size(1), 1, xshaped.size(3), 2)
-    x_out = torch.stack(
-        [
-            xshaped[..., 0] * rope_cache[..., 0] - xshaped[..., 1] * rope_cache[..., 1],
-            xshaped[..., 1] * rope_cache[..., 0] + xshaped[..., 0] * rope_cache[..., 1]
-        ],
-        dim=-1
-    )
-
-    x_out = x_out.flatten(3)
-    x_out = x_out.type_as(x)
-
-    return x_out.transpose(1, 2)
-
-
 class DecoderLayer(nn.Module):
     def __init__(
             self,
