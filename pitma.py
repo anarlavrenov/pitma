@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from typing import Tuple, Optional, Callable
-from layers import *
+from .layers import *
 
 
 class DecoderLayer(nn.Module):
