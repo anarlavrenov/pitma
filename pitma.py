@@ -55,14 +55,15 @@ class Decoder(nn.Module):
             norm_factory: Callable[[], nn.Module],
             is_padding: bool,
             pad_token_id: int,
-            max_seq_len: int = 4096
+            max_seq_len: int = 4096,
+            rope_theta: int = 500_000
     ) -> None:
         super().__init__()
 
         self.embedding = nn.Embedding(vocab_size, d_model, padding_idx=pad_token_id)
 
         depth = d_model // num_heads
-        self.rope = RoPE(depth, max_seq_len)
+        self.rope = RoPE(depth, max_seq_len, rope_theta)
 
         self.decoder_layers = nn.ModuleList(
             [DecoderLayer(d_model, num_heads, num_kv_heads, attn_dropout_rate,
