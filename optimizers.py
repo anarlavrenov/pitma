@@ -12,6 +12,7 @@ def build_optimizers(m:nn.Module, args):
         if not param.requires_grad:
             continue
 
+        # На будущее для DDP.
         name = name.removeprefix("module.")
 
         if name in adamw_allowed_weights or "norm" in name.lower():

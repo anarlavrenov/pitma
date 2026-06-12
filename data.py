@@ -89,6 +89,7 @@ class PackedCollate:
         src_doc_ids = chunk_doc_ids[:, :-1].contiguous()
         tgt_doc_ids = chunk_doc_ids[:, 1:].contiguous()
 
+        # Токены, которые находятся на пересечении документов будут игнорироваться.
         loss_mask = src_doc_ids == tgt_doc_ids
 
         # Все тензоры: size: (B, max_seq_len - 1).

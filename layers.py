@@ -4,6 +4,7 @@ from torch.nn import functional as F
 from torch.nn.attention.flex_attention import flex_attention
 from typing import Tuple, Optional
 
+flex_attention = torch.compile(flex_attention)
 
 def apply_rope(x: torch.Tensor, rope_cache: torch.Tensor) -> torch.Tensor:
     x = x.transpose(1, 2)
@@ -112,7 +113,7 @@ class GKVRoPEAttention(nn.Module):
         v = v.repeat_interleave(self.n_rep, dim=1)
 
         if block_mask is not None:
-            scaled_attention = flex_attention(q, k, v, block_mask=block_mask)
+            scaled_attention = compiled_flex_attention(q, k, v, block_mask=block_mask)
 
         else:
             scaled_attention = F.scaled_dot_product_attention(
