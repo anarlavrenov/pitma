@@ -113,7 +113,7 @@ class GKVRoPEAttention(nn.Module):
         v = v.repeat_interleave(self.n_rep, dim=1)
 
         if block_mask is not None:
-            scaled_attention = compiled_flex_attention(q, k, v, block_mask=block_mask)
+            scaled_attention = flex_attention(q, k, v, block_mask=block_mask)
 
         else:
             scaled_attention = F.scaled_dot_product_attention(
