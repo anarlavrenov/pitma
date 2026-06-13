@@ -37,7 +37,8 @@ def build_optimizers(m:nn.Module, args):
         lr=args.peak_lr,
         betas=(0.9, 0.95),
         weight_decay=args.weight_decay,
-        eps=1e-8
+        eps=1e-8,
+        fused=True
     )
 
     return optimizer_muon, optimizer_adamw
