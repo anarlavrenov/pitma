@@ -67,6 +67,8 @@ class Decoder(nn.Module):
         self.final_layer_norm = norm_factory()
         self.d_model = d_model
 
+        # Weight Init.
+        self._init_weights()
         # Weight Tying.
         self.output_fc.weight = self.embedding.weight
 
@@ -106,3 +108,19 @@ class Decoder(nn.Module):
         x = self.output_fc(x)
 
         return x
+
+    def _init_weights(self):
+        std = self.d_model ** -0.5
+        residual_scale = (2 * len(self.decoder_layers)) ** -0.5
+
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight, mean=0, std=std)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Embedding):
+                nn.init.normal_(m.weight, mean=0, std=std)
+
+        for layer in self.decoder_layers:
+            layer.self_attention.fc.weight.data.mul_(residual_scale)
+            layer.ff_module.w2.weight.data.mul_(residual_scale)
