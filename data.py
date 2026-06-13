@@ -48,12 +48,8 @@ class PackedCollate:
 
         # Сколько окон по 4096 токенов собралось.
         total_windows = len(self.buffer) // self.max_seq_len
-        if total_windows == 0:
-            empty_data = torch.empty((0, self.max_seq_len - 1), dtype=torch.long)
-            empty_doc = torch.empty((0, self.max_seq_len - 1), dtype=torch.long)
-            empty_mask = torch.empty((0, self.max_seq_len - 1), dtype=torch.bool)
-
-            return empty_data, empty_data, empty_doc, empty_mask
+        if total_windows <= self.batch_size:
+            return None
 
         # Проверка на то, не собралось ли на данный момент окон больше,
         # чем размер batch_size.

@@ -67,16 +67,19 @@ class Decoder(nn.Module):
         self.final_layer_norm = norm_factory()
         self.d_model = d_model
 
+        # Weight Tying.
+        self.output_fc.weight = self.embedding.weight
+
     def forward(
             self,
-            tgt: torch.Tensor,
+            src: torch.Tensor,
             doc_ids: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
 
-        x = self.embedding(tgt.to(torch.long))
+        x = self.embedding(src.to(torch.long))
 
         if doc_ids is not None:
-            assert doc_ids.shape == tgt.shape
+            assert doc_ids.shape == src.shape
             doc_ids = doc_ids.to(device=x.device, dtype=torch.long).contiguous()
             position_ids = make_reset_position_ids(doc_ids)
             rope_cache = self.rope.cache[position_ids]
