@@ -33,7 +33,7 @@ class IterableFlushDataset(torch.utils.data.IterableDataset):
             if not example:
                 continue
 
-            tokens = self.tokenizer.encode(example) + [self.eos_id]
+            tokens = self.tokenizer.encode(example, add_special_tokens=False) + [self.eos_id]
 
             # Если документ сам по себе > max_seq_len.
             if len(tokens) > self.max_seq_len:
@@ -73,6 +73,69 @@ class IterableFlushDataset(torch.utils.data.IterableDataset):
             yield self._emit(window_tokens, window_doc_ids)
 
 
+class IterableBaseDataset(torch.utils.data.IterableDataset):
+    def __init__(self, dataset, tokenizer):
+        super().__init__()
+
+        self.dataset = dataset
+        self.tokenizer = tokenizer
+
+    def __iter__(self):
+        for example in self.dataset:
+            if not example:
+                continue
+
+            # size: (1, L)
+            tokens = self.tokenizer.encode(example, return_tensors="pt", add_special_tokens=False)
+            # (L)
+            tokens = tokens.squeeze(0)
+            tokens = tokens.to(torch.long)
+
+            yield tokens
+
+
+class PackedCollateNTP:
+    def __init__(self, max_seq_len, batch_size, eos_id):
+
+        self.max_seq_len = max_seq_len
+        self.batch_size = batch_size
+        self.eos_id = eos_id
+        self.buffer = []
+
+    def __call__(self, batch):
+
+        for doc in batch:
+            if doc.numel() == 0:
+                continue
+
+            self.buffer.extend(doc.tolist())
+            self.buffer.append(self.eos_id)
+
+        # Сколько окон по max_seq_len токенов собралось.
+        total_windows = len(self.buffer) // self.max_seq_len
+        if total_windows == 0:
+            return None
+
+        # Проверка на то, не собралось ли на данный момент окон больше,
+        # чем размер batch_size.
+        total_windows = min(total_windows, self.batch_size)
+        # Собранное количество токенов на данный момент.
+        take_n_tokens = total_windows * self.max_seq_len
+        # Беру эти токены из буффера.
+        taken_tokens = self.buffer[:take_n_tokens]
+        # Удаляю из буффера взятые данные.
+        self.buffer = self.buffer[take_n_tokens:]
+
+        chunk = torch.tensor(taken_tokens, dtype=torch.long)
+        chunk = chunk.view(total_windows, self.max_seq_len)
+
+        src = chunk[:, :-1].contiguous()
+        tgt = chunk[:, 1:].contiguous()
+
+        # Все тензоры: size: (B, max_seq_len - 1).
+        return src, tgt
+
+
 def collate_fn_flush_ntp(batch):
 
   tokens = torch.stack([b[0] for b in batch])
@@ -87,11 +150,3 @@ def collate_fn_flush_ntp(batch):
 
   return src, tgt, src_doc_ids, loss_mask
 
-
-def collate_fn_flush_tst(batch):
-
-    tokens = torch.stack([b[0] for b in batch])
-    src = tokens[:, :-1].contiguous()
-    tgt = tokens[:, 1:].contiguous()
-
-    return src, tgt

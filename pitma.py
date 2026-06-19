@@ -1,5 +1,4 @@
 import torch
-from sympy.physics.quantum.grover import superposition_basis
 from torch import nn
 from torch.nn.attention.flex_attention import create_block_mask
 from typing import Tuple, Optional, Callable
