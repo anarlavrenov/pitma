@@ -86,8 +86,3 @@ def collate_fn_flush_ntp(batch):
   loss_mask = (src_doc_ids == tgt_doc_ids) & (tgt_doc_ids != 0)
 
   return src, tgt, src_doc_ids, loss_mask
-
-
-def collate_fn_flush_tst(batch):
-    tokens = torch.stack([b[0] for b in batch])
-    return tokens
