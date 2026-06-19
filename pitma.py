@@ -1,4 +1,5 @@
 import torch
+from sympy.physics.quantum.grover import superposition_basis
 from torch import nn
 from torch.nn.attention.flex_attention import create_block_mask
 from typing import Tuple, Optional, Callable
@@ -78,36 +79,59 @@ class Decoder(nn.Module):
             doc_ids: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
 
-        x = self.embedding(src.to(torch.long))
+        # Фаза суперпозиции.
+        if len(src.shape) == 3:
+            bs, superposition_len, superposition_bag_size = src.shape
 
-        if doc_ids is not None:
-            assert doc_ids.shape == src.shape
-            doc_ids = doc_ids.to(device=x.device, dtype=torch.long).contiguous()
-            position_ids = make_reset_position_ids(doc_ids)
-            rope_cache = self.rope.cache[position_ids]
+            h = self.embedding(src[..., 0].to(torch.long))
+            h_dtype = h.dtype
+            h = h.float()
 
-            B, L = doc_ids.size()
+            for i in range(1, superposition_bag_size):
+                h = h + self.embedding(src[..., i]).float()
 
-            def mask_mod(b, h, q_idx, kv_idx):
-                same_doc = doc_ids[b, q_idx] == doc_ids[b, kv_idx]
-                causal = q_idx >= kv_idx
-                return same_doc & causal
+            x = (h / superposition_bag_size).to(h_dtype)
 
-            block_mask = create_block_mask(
-                mask_mod, B=B,H=None, Q_LEN=L, KV_LEN=L, device=doc_ids.device, _compile=True
-            )
-
-        else:
             block_mask = None
             rope_cache = self.rope.cache[:x.size(1)]
+            for layer in self.decoder_layers:
+                x = layer(x, rope_cache, block_mask)
+            x = self.final_layer_norm(x)
+            x = self.output_fc(x)
+            return x
 
-        for layer in self.decoder_layers:
-            x = layer(x, rope_cache, block_mask)
+        # Обычная фаза NTP.
+        else:
+            x = self.embedding(src.to(torch.long))
 
-        x = self.final_layer_norm(x)
-        x = self.output_fc(x)
+            if doc_ids is not None:
+                assert doc_ids.shape == src.shape
+                doc_ids = doc_ids.to(device=x.device, dtype=torch.long).contiguous()
+                position_ids = make_reset_position_ids(doc_ids)
+                rope_cache = self.rope.cache[position_ids]
 
-        return x
+                B, L = doc_ids.size()
+
+                def mask_mod(b, h, q_idx, kv_idx):
+                    same_doc = doc_ids[b, q_idx] == doc_ids[b, kv_idx]
+                    causal = q_idx >= kv_idx
+                    return same_doc & causal
+
+                block_mask = create_block_mask(
+                    mask_mod, B=B,H=None, Q_LEN=L, KV_LEN=L, device=doc_ids.device, _compile=True
+                )
+
+            else:
+                block_mask = None
+                rope_cache = self.rope.cache[:x.size(1)]
+
+            for layer in self.decoder_layers:
+                x = layer(x, rope_cache, block_mask)
+
+            x = self.final_layer_norm(x)
+            x = self.output_fc(x)
+
+            return x
 
     def _init_weights(self):
         std = self.d_model ** -0.5
