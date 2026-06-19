@@ -73,7 +73,7 @@ class IterableFlushDataset(torch.utils.data.IterableDataset):
             yield self._emit(window_tokens, window_doc_ids)
 
 
-def collate_fn_flush_ntp(batch):
+def collate_fn_flush(batch):
 
   tokens = torch.stack([b[0] for b in batch])
   doc_ids = torch.stack([b[1] for b in batch])
