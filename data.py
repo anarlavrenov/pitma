@@ -94,7 +94,7 @@ class IterableBaseDataset(torch.utils.data.IterableDataset):
             yield tokens
 
 
-class PackedCollateNTP:
+class PackedCollateTST:
     def __init__(self, max_seq_len, batch_size, eos_id):
 
         self.max_seq_len = max_seq_len
