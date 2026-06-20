@@ -113,12 +113,10 @@ class PackedCollateTST:
 
         # Сколько окон по max_seq_len токенов собралось.
         total_windows = len(self.buffer) // self.max_seq_len
-        if total_windows == 0:
+        if total_windows < self.batch_size:
             return None
 
-        # Проверка на то, не собралось ли на данный момент окон больше,
-        # чем размер batch_size.
-        total_windows = min(total_windows, self.batch_size)
+        total_windows = self.batch_size
         # Собранное количество токенов на данный момент.
         take_n_tokens = total_windows * self.max_seq_len
         # Беру эти токены из буффера.
@@ -149,4 +147,3 @@ def collate_fn_flush_ntp(batch):
   loss_mask = (src_doc_ids == tgt_doc_ids) & (tgt_doc_ids != 0)
 
   return src, tgt, src_doc_ids, loss_mask
-

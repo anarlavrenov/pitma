@@ -52,8 +52,7 @@ class RoPE(nn.Module):
         self.register_buffer("cache", cache, persistent=False)
 
 
-# 1. RoPE.
-# 2. GQA.
+
 class GKVRoPEAttention(nn.Module):
     def __init__(
             self,
